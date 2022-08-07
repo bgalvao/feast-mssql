@@ -1,0 +1,13 @@
+version: "3"
+services:
+  db:
+    # image: mcr.microsoft.com/mssql/server:2022-latest
+    # image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    container_name: "feast-mssql-test-db"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: Dck3r_pa55
+    # command: mssql -c 'log_statement=all'
+    ports:
+      - "1433:1433"
