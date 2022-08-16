@@ -1,1 +1,2 @@
-# feast-mssql-offlinestore
+# feast-mssql
+

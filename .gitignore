@@ -4,4 +4,6 @@
 .envrc
 feature_repo/online_store.db
 feature_repo/registry.db
+**db
 output
+feast-postgres
