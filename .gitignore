@@ -7,3 +7,4 @@ feature_repo/registry.db
 **db
 output
 feast-postgres
+feast_mssql.egg-info
