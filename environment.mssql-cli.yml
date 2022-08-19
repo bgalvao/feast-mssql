@@ -1,0 +1,47 @@
+name: mssql-cli
+channels:
+  - conda-forge
+dependencies:
+  - _libgcc_mutex=0.1
+  - _openmp_mutex=4.5
+  - ca-certificates=2022.6.15
+  - ld_impl_linux-64=2.36.1
+  - libffi=3.4.2
+  - libgcc-ng=12.1.0
+  - libgomp=12.1.0
+  - libnsl=2.0.0
+  - libstdcxx-ng=12.1.0
+  - libzlib=1.2.12
+  - ncurses=6.3
+  - openssl=3.0.5
+  - pip=22.2.2
+  - python=3.7.12
+  - python_abi=3.7
+  - readline=8.1.2
+  - setuptools=63.4.2
+  - sqlite=3.39.2
+  - tk=8.6.12
+  - wheel=0.37.1
+  - xz=5.2.5
+  - zlib=1.2.12
+  - pip:
+    - applicationinsights==0.11.10
+    - argparse==1.4.0
+    - backports-csv==1.0.7
+    - cli-helpers==0.2.3
+    - click==7.0
+    - configobj==5.0.6
+    - enum34==1.1.10
+    - future==0.18.2
+    - humanize==4.3.0
+    - importlib-metadata==4.12.0
+    - mssql-cli==1.0.0
+    - prompt-toolkit==2.0.10
+    - pygments==2.12.0
+    - six==1.16.0
+    - sqlparse==0.2.4
+    - terminaltables==3.1.10
+    - typing-extensions==4.3.0
+    - wcwidth==0.2.5
+    - zipp==3.8.1
+prefix: /home/brnrdo/.mambaforge/envs/mssql-cli
