@@ -72,7 +72,7 @@ def sql_create_table(entity_df, table_name, cursor: Cursor = None) -> str | Curs
 
 
 def sql_drop_table(
-    table_name: str, cursor: Cursor = None, schema="dbo"
+    table_name: str, schema="dbo", cursor: Cursor = None
 ) -> str | Cursor:
     query = f"DROP TABLE IF EXISTS {schema}.{table_name};"
 
@@ -83,13 +83,14 @@ def sql_drop_table(
 
 
 def sql_insert_values_into_table(
-    entity_df: pd.DataFrame, table_name: str, cursor: Cursor = None, schema="dbo"
+    entity_df: pd.DataFrame, table_name: str, schema="dbo", cursor: Cursor = None
 ) -> str | Cursor:
     query = f"""
         INSERT INTO {schema}.{table_name} VALUES ({', '.join( ("%s",) * len(entity_df.columns))});
     """
     if cursor is not None:
         sql_data = tuple(map(tuple, entity_df.replace({np.NaN: None}).values))
+        print(cursor)
         cursor.executemany(query, sql_data)
         return dict(zip(entity_df.columns, entity_df.dtypes))
         return cursor

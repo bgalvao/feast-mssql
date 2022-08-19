@@ -1,0 +1,132 @@
+import json
+from typing import Callable, Dict, Iterable, Optional, Tuple
+
+from feast.data_source import DataSource
+from feast.protos.feast.core.DataSource_pb2 import DataSource as DataSourceProto
+from feast.repo_config import RepoConfig
+from feast.value_type import ValueType
+
+from feast_mssql.connection_utils import _get_conn
+from feast_mssql.type_map import (
+    mssql_type_code_to_mssql_type,
+    mssql_type_to_feast_value_type,
+)
+
+
+class MSSQLSource(DataSource):
+    def __init__(
+        self,
+        name: str,
+        query: str,
+        timestamp_field: Optional[str] = "",
+        created_timestamp_column: Optional[str] = "",
+        field_mapping: Optional[Dict[str, str]] = None,
+        description: Optional[str] = "",
+        tags: Optional[Dict[str, str]] = None,
+        owner: Optional[str] = "",
+    ):
+        self._mssql_options = MSSQLOptions(name=name, query=query)
+
+        super().__init__(
+            name=name,
+            timestamp_field=timestamp_field,
+            created_timestamp_column=created_timestamp_column,
+            field_mapping=field_mapping,
+            description=description,
+            tags=tags,
+            owner=owner,
+        )
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        if not isinstance(other, PostgreSQLSource):
+            raise TypeError(
+                "Comparisons should only involve MSSQLSource class objects."
+            )
+
+        return (
+            super().__eq__(other)
+            and self._mssql_options._query == other._mssql_options._query
+            and self.timestamp_field == other.timestamp_field
+            and self.created_timestamp_column == other.created_timestamp_column
+            and self.field_mapping == other.field_mapping
+        )
+
+    @staticmethod
+    def from_proto(data_source: DataSourceProto):
+        assert data_source.HasField("custom_options")
+
+        mssql_options = json.loads(data_source.custom_options.configuration)
+        return MSSQLDataSource(
+            name=mssql_options["name"],
+            query=mssql_options["query"],
+            field_mapping=dict(data_source.field_mapping),
+            timestamp_field=data_source.timestamp_field,
+            created_timestamp_column=data_source.created_timestamp_column,
+            description=data_source.description,
+            tags=dict(data_source.tags),
+            owner=data_source.owner,
+        )
+
+    def to_proto(self) -> DataSourceProto:
+        data_source_proto = DataSourceProto(
+            name=self.name,
+            type=DataSourceProto.CUSTOM_SOURCE,
+            # dont know if the value below will pass the tests
+            data_source_class_type="feast_mssql.offline_stores.MSSQLSource",
+            field_mapping=self.field_mapping,
+            custom_options=self._postgres_options.to_proto(),
+            description=self.description,
+            tags=self.tags,
+            owner=self.owner,
+        )
+
+        data_source_proto.timestamp_field = self.timestamp_field
+        data_source_proto.created_timestamp_column = self.created_timestamp_column
+
+        return data_source_proto
+
+    def validate(self, config: RepoConfig):
+        pass
+
+    @staticmethod
+    def source_datatype_to_feast_value_type() -> Callable[[str], ValueType]:
+        return mssql_type_to_feast_value_type
+
+    # TODO: define and test mssql_type_code_to_mssql_type
+    def get_table_column_names_and_types(
+        self, config: RepoConfig
+    ) -> Iterable[Tuple[str, str]]:
+        with _get_conn(config.offline_store) as conn, conn.cursor() as cur:
+            print(f"SELECT TOP (0) * FROM {self.get_table_query_string()} AS sub")
+            cur.execute(f"SELECT TOP (0) * FROM {self.get_table_query_string()} AS sub")
+            return (
+                (c[0], mssql_type_code_to_mssql_type(c[1])) for c in cur.description
+            )
+
+    def get_table_query_string(self) -> str:
+        return f"({self._mssql_options._query})"
+
+
+class MSSQLOptions:
+    def __init__(self, name: str, query: Optional[str]):
+        self.name = name
+        self._query = query
+
+    @classmethod
+    def from_proto(cls, mssql_options_proto: DataSourceProto.CustomSourceOptions):
+        config = json.loads(mssql_options_proto.configuration.decode("utf8"))
+        mssql_options = cls(name=config["name"], query=config["query"])
+
+        return mssql_options
+
+    def to_proto(self) -> DataSourceProto.CustomSourceOptions:
+        mssql_options_proto = DataSourceProto.CustomSourceOptions(
+            configuration=json.dumps(
+                {"name": self._name, "query": self._query}
+            ).encode()
+        )
+
+        return mssql_options_proto

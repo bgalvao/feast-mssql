@@ -8,10 +8,11 @@ import numpy as np
 
 from feast_mssql.mssql_config import MSSQLConfig
 from feast_mssql.connection_utils import (
-    get_connection,
+    _get_conn,
     sql_create_table,
     sql_drop_table,
     sql_insert_values_into_table,
+    sql_create_database,
 )
 from feast_mssql.type_map import arrow_to_mssql_type
 
@@ -45,23 +46,24 @@ def config_cli() -> MSSQLConfig:
         port=click.prompt("MSSQL port", default="1433"),
         database=click.prompt("MSSQL DB name", default="feast_offline_store"),
         user=click.prompt("MSSQL user", default="sa"),
-        password=click.prompt("MSSQL password", hide_input=True),
+        password=click.prompt("MSSQL password", hide_input=True, default="Dck3r_pa55"),
     )
 
 
 def overwrite_config(config_filepath: pathlib.Path, config: MSSQLConfig) -> None:
     def replace_str_in_file(file_path, match_str, sub_str):
+        sub_str = str(sub_str)
         with open(file_path, "r") as f:
             contents = f.read()
         contents = contents.replace(match_str, sub_str)
         with open(file_path, "wt") as f:
             f.write(contents)
 
-    replace_str_in_file(config_filepath, "DB_HOST", config.mssql_host)
-    replace_str_in_file(config_filepath, "DB_PORT", config.mssql_port)
-    replace_str_in_file(config_filepath, "DB_NAME", config.mssql_database)
-    replace_str_in_file(config_filepath, "DB_USERNAME", config.mssql_user)
-    replace_str_in_file(config_filepath, "DB_PASSWORD", config.mssql_password)
+    replace_str_in_file(config_filepath, "DB_HOST", config.host)
+    replace_str_in_file(config_filepath, "DB_PORT", config.port)
+    replace_str_in_file(config_filepath, "DB_NAME", config.database)
+    replace_str_in_file(config_filepath, "DB_USERNAME", config.user)
+    replace_str_in_file(config_filepath, "DB_PASSWORD", config.password)
 
 
 def bootstrap():
@@ -81,12 +83,21 @@ def bootstrap():
         'Should I upload example data to MSSQL (overwriting "feast_driver_hourly_stats" table)?',
         default=True,
     ):
-        with get_conn(config=config) as connection:
+        table_name = "feast_driver_hourly_stats"
+        with _get_conn(config=config) as connection:
 
             with connection.cursor() as cursor:
-                sql_drop_table(table_name, cursor=cursor)
-                sql_create_table(entity_df, table_name, cursor=cursor)
-                sql_insert_values_into_table(table_name, df, cursor=cursor)
+                # sql_create_database(config.database)
+                # cursor.execute(f"USE {config.database};")
+                cursor.execute(sql_drop_table(table_name))
+                connection.commit()
+
+                cursor.execute(sql_create_table(driver_df, table_name))
+                connection.commit()
+
+                insert_sql = sql_insert_values_into_table(driver_df, table_name)
+                sql_data = tuple(map(tuple, driver_df.replace({np.NaN: None}).values))
+                cursor.executemany(insert_sql, sql_data)
                 connection.commit()
 
 
